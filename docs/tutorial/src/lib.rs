@@ -45,9 +45,11 @@ fn store_transaction_data(blk: eth::Block, s: StoreSetIfNotExistsProto<Transacti
 #[substreams::handlers::map]
 fn db_out(
     block_meta_start: store::Deltas<DeltaProto<BlockMeta>>,
+    store_transaction_data: store::Deltas<DeltaProto<Transaction>>
 ) -> Result<DatabaseChanges, substreams::errors::Error> {
     let mut database_changes: DatabaseChanges = Default::default();
     transform_block_meta_to_database_changes(&mut database_changes, block_meta_start);
+    transform_transaction_data_to_database_changes(&mut database_changes, store_transaction_data);
     Ok(database_changes)
 }
 
@@ -211,20 +213,20 @@ fn push_update(
         .change("size", (old_value.size, new_value.size))
         .change("gas_limit", (old_value.number, new_value.gasLimit))
         .change("gas_used", (old_value.number, new_value.gasUsed))
-        .change("id", (old_value.id, new_value.id))
-        .change("hash", (old_value.hash, new_value.hash))
-        .change(
-            "parent_hash",
-            (old_value.parentHash, new_value.parentHash),
-        )
-        .change(
-            "uncle_hash",
-            (old_value.uncleHash, new_value.uncleHash),
-        )
-        .change(
-            "timestamp",
-            (&old_value.timestamp.unwrap(), &new_value.timestamp.unwrap()),
-        );
+        .change("id", (old_value.id, new_value.id));
+        // .change("hash", (old_value.hash, new_value.hash))
+        // .change(
+        //     "parent_hash",
+        //     (old_value.parentHash, new_value.parentHash),
+        // )
+        // .change(
+        //     "uncle_hash",
+        //     (old_value.uncleHash, new_value.uncleHash),
+        // )
+        // .change(
+        //     "timestamp",
+        //     (&old_value.timestamp.unwrap(), &new_value.timestamp.unwrap()),
+        // );
 }
 
 

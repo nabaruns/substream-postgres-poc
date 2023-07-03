@@ -37,5 +37,7 @@ modules:
     inputs:
       - store: store_block_meta_start
         mode: deltas
+      - store: store_transaction_data
+        mode: deltas
     output:
       type: proto:sf.substreams.sink.database.v1.DatabaseChanges
