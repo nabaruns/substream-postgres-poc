@@ -35,10 +35,32 @@ fn store_transaction_data(blk: eth::Block, s: StoreSetIfNotExistsProto<Transacti
     let main_list = TransactionList {
         transaction_details_list,
     };
+    let timestamp = BlockTimestamp::from_block(&blk);
     for transaction in main_list.transaction_details_list {
-        s.set_if_not_exists(transaction.blockNumber, &format!("transaction.id"), &transaction);
+        s.set_if_not_exists(transaction.blockNumber, timestamp.start_of_day_key(), &transaction);
+        s.set_if_not_exists(transaction.blockNumber, timestamp.start_of_month_key(), &transaction);
     }
 }
+
+// // store for conract data
+// #[substreams::handlers::store]
+// fn store_transaction_data(blk: eth::Block, s: StoreSetIfNotExistsProto<Transaction>) {
+//     let transaction_details_list = blk
+//         .transaction_traces
+//         .clone().into_iter()
+//         .filter(|trx| trx.status == TransactionTraceStatus::Succeeded as i32)
+//         .map(|trx| transform_contract_to_contract_meta(trx, &blk))
+//         .collect();
+
+//     let main_list = ContractList {
+//         contract_list,
+//     };
+//     let timestamp = BlockTimestamp::from_block(&blk);
+//     for contract in main_list.contract_list {
+//         s.set_if_not_exists(contract.blockNumber, timestamp.start_of_day_key(), &contract);
+//         s.set_if_not_exists(contract.blockNumber, timestamp.start_of_month_key(), &contract);
+//     }
+// }
 
 
 // main db_out function
@@ -97,6 +119,27 @@ fn transform_transaction_to_transaction_meta(trx:  eth::TransactionTrace, block:
         }
     
 }
+
+// fn transform_contract_to_contract_meta(
+//     trx: eth::TransactionTrace,
+//     block: &eth::Block,
+// ) -> Option<Contract> {
+//     let header = block.header.as_ref().unwrap();
+//     let contract_check = String::from_utf8_lossy(&trx.input).to_string();
+//     let block_number = block.number;
+//     let time_stamp = header.timestamp.clone().unwrap().seconds;
+//     if contract_check.starts_with("`�`@R") {
+//         Some(Contract {
+//             owner: base_64_to_hex(trx.from),
+//             address: base_64_to_hex(trx.to),
+//             transactionHash:  base_64_to_hex(trx.hash),
+//             blockNumber:block_number,
+//             timestamp: time_stamp,
+//         })
+//     } else {    
+//         None
+//     }
+// }
 
 
 // base64 to hex
@@ -175,6 +218,33 @@ fn transform_transaction_data_to_database_changes(
     }
 }
 
+// fn transform_contract_data_to_database_changes(
+//     changes: &mut DatabaseChanges,
+//     deltas: store::Deltas<DeltaProto<Contract>>,
+// ) {
+//     use substreams::pb::substreams::store_delta::Operation;
+
+//     for delta in deltas.deltas {
+//         match delta.operation {
+//             Operation::Create => push_create_contract(
+//                 changes,
+//                 &delta.key,
+//                 delta.ordinal,
+//                 delta.new_value,
+//             ),
+//             Operation::Update => push_update_contract(
+//                 changes,
+//                 &delta.key,
+//                 delta.ordinal,
+//                 delta.old_value,
+//                 delta.new_value,
+//             ),
+//             Operation::Delete => todo!(),
+//             x => panic!("unsupported opeation {:?}", x),
+//         }
+//     }
+// }
+
 // consider moving back into a standalone file
 //#[path = "db_out.rs"]
 //mod db;
@@ -242,9 +312,11 @@ fn push_create_transaction(
         .change("gas_limit", (None, value.gasLimit))
         .change("gas_used", (None, value.gasUsed))
         .change("id", (None, value.id.clone()))
-        .change("hash", (None, value.id.clone()));
-        // .change("to", (None, value.to))
-        // .change("from", (None, value.from));
+        .change("block_number", (None, value.blockNumber))
+        .change("timestamp", (None, value.timestamp))
+        .change("hash", (None, value.id.clone()))
+        .change("to_address", (None, value.to))
+        .change("from_address", (None, value.from));
 }
 
 
@@ -257,10 +329,46 @@ fn push_update_transaction(
 ) {
     changes
         .push_change("transactions", key, ordinal, Operation::Update)
-        .change("at", (old_value.timestamp, new_value.timestamp))
         .change("status", (old_value.status, new_value.status))
         .change("gas_limit", (old_value.gasLimit, new_value.gasLimit))
         .change("gas_used", (old_value.gasUsed, new_value.gasUsed))
         .change("id", (old_value.id.clone(), new_value.id.clone()))
-        .change("hash", (old_value.id.clone(), new_value.id.clone()));
+        .change("block_number", (old_value.blockNumber, new_value.blockNumber))
+        .change("hash", (old_value.id.clone(), new_value.id.clone()))
+        .change("to_address", (old_value.to, new_value.to))
+        .change("from_address", (old_value.from, new_value.from));
 }
+
+// fn push_create_contract(
+//     changes: &mut DatabaseChanges,
+//     key: &str,
+//     ordinal: u64,
+//     value: Contract,
+// ) {
+//     changes
+//         .push_change("contracts", key, ordinal, Operation::Create)
+//         .change("owner", (None, value.owner))
+//         .change("address", (None, value.address))
+//         .change("transaction_hash", (None, value.transactionHash))
+//         .change("block_number", (None, value.blockNumber))
+//         .change("timestamp", (None, value.timestamp));
+// }
+
+// fn push_update_contract(
+//     changes: &mut DatabaseChanges,
+//     key: &str,
+//     ordinal: u64,
+//     old_value: Contract,
+//     new_value: Contract,
+// ) {
+//     changes
+//         .push_change("contracts", key, ordinal, Operation::Update)
+//         .change("status", (old_value.status, new_value.status))
+//         .change("gas_limit", (old_value.gasLimit, new_value.gasLimit))
+//         .change("gas_used", (old_value.gasUsed, new_value.gasUsed))
+//         .change("id", (old_value.id.clone(), new_value.id.clone()))
+//         .change("block_number", (old_value.blockNumber, new_value.blockNumber))
+//         .change("hash", (old_value.id.clone(), new_value.id.clone()))
+//         .change("to_address", (old_value.to, new_value.to))
+//         .change("from_address", (old_value.from, new_value.from));
+// }
