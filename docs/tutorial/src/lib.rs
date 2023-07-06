@@ -35,7 +35,6 @@ fn add_block_entity(tables: &mut Tables, blk: &eth::Block) {
             blk.header.as_ref().unwrap().timestamp.as_ref().unwrap(),
         )
         .set("size", blk.size)
-        .set("parent_hash", header.parent_hash.clone())
         // .set("transaction_nonce", header.nonce)
         .set("receipt_root", header.receipt_root.clone())
         .set("gas_limit", header.gas_limit)
@@ -55,7 +54,7 @@ fn add_trx_info_entity(tables: &mut Tables, trx: &eth::TransactionTrace,  block_
         // .set("transaction_nonce",  trx.nonce)
         .set("to_address",  base_64_to_hex(trx.to.clone()))
         .set("from_address",  base_64_to_hex(trx.from.clone()))
-        .set("max_fee_per_gas",  option_bigint_to_number_string(trx.max_fee_per_gas.clone()))
+        // .set("max_fee_per_gas",  option_bigint_to_number_string(trx.max_fee_per_gas.clone()))
         // .set("max_priority_fee_per_gas",  option_bigint_to_number_string(trx.max_priority_fee_per_gas.clone()))
         .set("block_number",  block_number.clone())
         // .set("value",  option_bigint_to_number_string(trx.value.clone()))
@@ -112,12 +111,15 @@ fn db_out(
     add_block_entity(&mut tables, &blk);
     for trx in &blk.transaction_traces{
         // get transactions data
-        add_trx_info_entity(&mut tables, &trx, block_number, time_stamp);
+        if(trx.status == TransactionTraceStatus::Succeeded as i32) {
+            add_trx_info_entity(&mut tables, &trx, block_number, time_stamp);
         let contract_check = String::from_utf8_lossy(&trx.input).to_string();
         if contract_check.starts_with("`�`@R"){
             //get contracts data
             add_contracts_info_entity(&mut tables, &trx, block_number, time_stamp);
         }
+        }
+        
        
     }
     Ok(tables.to_database_changes())

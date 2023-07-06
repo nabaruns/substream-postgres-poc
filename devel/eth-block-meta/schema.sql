@@ -1,11 +1,8 @@
 create table block_meta
 (
-    id          integer not null constraint block_meta_pk primary key,
-    at          text,
+    id          text not null constraint block_meta_pk primary key,
     number      integer,
-    hash        text,
     parent_hash text,
-    uncle_hash  text,
     receipt_root text,
     gas_limit text,
     gas_used text,
@@ -26,10 +23,9 @@ create table transactions
     id         text not null constraint transactions_pk primary key,
     status     text,
     gas_used   bigint,
-    gas_limit  text,
-    block_number bigint,
+    gas_limit  bigint,
+    block_number int,
     timestamp  text,
-    hash       text,
     to_address text,
     from_address   text
 );
