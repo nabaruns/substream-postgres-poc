@@ -1,12 +1,8 @@
 // @generated
-pub mod eth {
-    pub mod block_meta {
-        // @@protoc_insertion_point(attribute:eth.block_meta.v1)
-        pub mod v1 {
-            include!("../acme.rs");
-            // @@protoc_insertion_point(eth.block_meta.v1)
-        }
-    }
+// @@protoc_insertion_point(attribute:acme)
+pub mod acme {
+    include!("acme.rs");
+    // @@protoc_insertion_point(acme)
 }
 pub mod google {
     // @@protoc_insertion_point(attribute:google.protobuf)

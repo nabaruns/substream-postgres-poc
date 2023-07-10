@@ -23,7 +23,7 @@ fn add_block_entity(tables: &mut Tables, blk: &eth::Block) {
     let header = blk.header.as_ref().unwrap();
 
     tables
-        .create_row("block_meta", base_64_to_hex(block_hash.clone()))
+        .create_row("blocks", base_64_to_hex(block_hash.clone()))
         .set("id", blk.hash.clone())
         .set("number", blk.number)
         .set(
@@ -111,6 +111,7 @@ fn db_out(
     add_block_entity(&mut tables, &blk);
     for trx in &blk.transaction_traces{
         // get transactions data
+        log::info!("hello");
         if(trx.status == TransactionTraceStatus::Succeeded as i32) {
             add_trx_info_entity(&mut tables, &trx, block_number, time_stamp);
         let contract_check = String::from_utf8_lossy(&trx.input).to_string();
