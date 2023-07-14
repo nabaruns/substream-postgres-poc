@@ -1,7 +1,5 @@
-mod block_timestamp;
 mod pb;
 
-use self::block_timestamp::BlockTimestamp;
 use substreams_database_change::tables::Tables;
 use hex;    
 use pb::acme::{BlockMeta, Transaction, TransactionList, Contract, ContractList};
@@ -23,7 +21,7 @@ fn add_block_entity(tables: &mut Tables, blk: &eth::Block) {
     let header = blk.header.as_ref().unwrap();
 
     tables
-        .create_row("blocks", base_64_to_hex(block_hash.clone()))
+        .create_row("block_meta", base_64_to_hex(block_hash.clone()))
         .set("id", blk.hash.clone())
         .set("number", blk.number)
         .set(
@@ -35,7 +33,7 @@ fn add_block_entity(tables: &mut Tables, blk: &eth::Block) {
             blk.header.as_ref().unwrap().timestamp.as_ref().unwrap(),
         )
         .set("size", blk.size)
-        // .set("transaction_nonce", header.nonce)
+        .set("nonce", header.nonce)
         .set("receipt_root", header.receipt_root.clone())
         .set("gas_limit", header.gas_limit)
         .set("gas_used", header.gas_used);
@@ -46,19 +44,18 @@ fn add_trx_info_entity(tables: &mut Tables, trx: &eth::TransactionTrace,  block_
     time_stamp: i64,) {
     
     tables
-        .create_row("transactions",  base_64_to_hex(trx.hash.clone()))
-        .set("id", trx.hash.clone())
-        .set("status", trx.status)
-        .set("gas_used",  trx.gas_used)
-        .set("gas_limit",  trx.gas_limit)
-        // .set("transaction_nonce",  trx.nonce)
-        .set("to_address",  base_64_to_hex(trx.to.clone()))
-        .set("from_address",  base_64_to_hex(trx.from.clone()))
-        // .set("max_fee_per_gas",  option_bigint_to_number_string(trx.max_fee_per_gas.clone()))
-        // .set("max_priority_fee_per_gas",  option_bigint_to_number_string(trx.max_priority_fee_per_gas.clone()))
-        .set("block_number",  block_number.clone())
-        // .set("value",  option_bigint_to_number_string(trx.value.clone()))
-        .set("timestamp",  time_stamp);
+    .create_row("transactions",  base_64_to_hex(trx.hash.clone()))
+    .set("id", trx.hash.clone())
+    .set("status", trx.status)
+    .set("gas_used",  trx.gas_used)
+    .set("gas_limit",  trx.gas_limit)
+    .set("transaction_nonce",  trx.nonce)
+    .set("to_address",  base_64_to_hex(trx.to.clone()))
+    .set("from_address",  base_64_to_hex(trx.from.clone()))
+    .set("max_fee_per_gas",  option_bigint_to_number_string(trx.max_fee_per_gas.clone()))
+    .set("max_priority_fee_per_gas",  option_bigint_to_number_string(trx.max_priority_fee_per_gas.clone()))
+    .set("block_number",  block_number.clone())
+    .set("timestamp",  time_stamp);
 }
 
 //create contract entity
@@ -88,11 +85,9 @@ fn option_bigint_to_number_string(bigint: Option<BigInt>) -> String {
         .map(|num| {
             let bytes = num.bytes;
             let mut value: u128 = 0;
-
             for byte in bytes {
                 value = (value << 8) + u128::from(byte);
             }
-
             value.to_string()
         })
         .unwrap_or_else(String::new)
@@ -120,8 +115,6 @@ fn db_out(
             add_contracts_info_entity(&mut tables, &trx, block_number, time_stamp);
         }
         }
-        
-       
     }
     Ok(tables.to_database_changes())
 }
